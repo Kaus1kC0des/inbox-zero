@@ -49,12 +49,13 @@ export const env = createEnv({
     MICROSOFT_CLIENT_ID: z.string().optional(),
     MICROSOFT_CLIENT_SECRET: z.string().optional(),
     MICROSOFT_TENANT_ID: z.string().optional().default("common"),
-    EMAIL_ENCRYPT_SECRET: z.string(),
-    EMAIL_ENCRYPT_SALT: z.string(),
+    EMAIL_ENCRYPT_SECRET: z.string().optional(),
+    EMAIL_ENCRYPT_SALT: z.string().optional(),
 
     DEFAULT_LLM_PROVIDER: z
       // custom is deprecated
-      .enum([...llmProviderEnum.options, "custom"]),
+      .enum([...llmProviderEnum.options, "custom"])
+      .optional(),
     DEFAULT_LLM_MODEL: z.string().optional(),
     DEFAULT_LLM_FALLBACKS: z.string().optional(), // Comma-separated provider:model chain; explicit model required (e.g., "openrouter:anthropic/claude-sonnet-4.5,openai:gpt-5.1")
     DEFAULT_OPENROUTER_PROVIDERS: z.string().optional(), // Comma-separated list of OpenRouter providers for default model (e.g., "Google Vertex,Anthropic")
@@ -115,7 +116,7 @@ export const env = createEnv({
     QSTASH_CURRENT_SIGNING_KEY: z.string().optional(),
     QSTASH_NEXT_SIGNING_KEY: z.string().optional(),
 
-    GOOGLE_PUBSUB_TOPIC_NAME: z.string().min(1),
+    GOOGLE_PUBSUB_TOPIC_NAME: z.string().optional(),
     GOOGLE_PUBSUB_VERIFICATION_TOKEN: z.string().optional(),
 
     MICROSOFT_WEBHOOK_CLIENT_STATE: z.string().optional(),
@@ -166,7 +167,7 @@ export const env = createEnv({
       .transform((value) => value?.split(",")),
     WEBHOOK_URL: z.string().optional(),
     INTERNAL_API_URL: z.string().optional(),
-    INTERNAL_API_KEY: z.string(),
+    INTERNAL_API_KEY: z.string().optional(),
     WHITELIST_FROM: z.string().optional(),
     HEALTH_API_KEY: z.string().optional(),
     OAUTH_PROXY_URL: z.string().url().optional(),

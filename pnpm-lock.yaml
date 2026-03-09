@@ -217,6 +217,9 @@ importers:
       '@portabletext/react':
         specifier: 6.0.2
         version: 6.0.2(react@19.2.4)
+      '@prisma/adapter-mariadb':
+        specifier: ^7.4.2
+        version: 7.4.2
       '@prisma/adapter-pg':
         specifier: 7.3.0
         version: 7.3.0
@@ -448,6 +451,9 @@ importers:
       mammoth:
         specifier: 1.11.0
         version: 1.11.0
+      mariadb:
+        specifier: ^3.5.1
+        version: 3.5.1(@types/geojson@7946.0.16)(@types/node@24.10.1)
       motion:
         specifier: 12.34.0
         version: 12.34.0(@emotion/is-prop-valid@1.2.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -3941,6 +3947,9 @@ packages:
   '@posthog/types@1.353.1':
     resolution: {integrity: sha512-8zTsChX8yvYT9t5H1u9fb+qRAetYDIXGRXKDPv7goKyF+cuFFAVofKwlVSZ9W41sS1sYsMMqjXLRJzawgDVXxw==}
 
+  '@prisma/adapter-mariadb@7.4.2':
+    resolution: {integrity: sha512-s9iIan8UDce47Mdsqzm/JnFK/c2vmTXAtKYvBuE4zOockjxLZCB487AMPLx9CgUknqBsGlVqad7AY4QkznSYkA==}
+
   '@prisma/adapter-pg@7.3.0':
     resolution: {integrity: sha512-iuYQMbIPO6i9O45Fv8TB7vWu00BXhCaNAShenqF7gLExGDbnGp5BfFB4yz1K59zQ59jF6tQ9YHrg0P6/J3OoLg==}
 
@@ -3968,11 +3977,17 @@ packages:
   '@prisma/debug@7.3.0':
     resolution: {integrity: sha512-yh/tHhraCzYkffsI1/3a7SHX8tpgbJu1NPnuxS4rEpJdWAUDHUH25F1EDo6PPzirpyLNkgPPZdhojQK804BGtg==}
 
+  '@prisma/debug@7.4.2':
+    resolution: {integrity: sha512-aP7qzu+g/JnbF6U69LMwHoUkELiserKmWsE2shYuEpNUJ4GrtxBCvZwCyCBHFSH2kLTF2l1goBlBh4wuvRq62w==}
+
   '@prisma/dev@0.20.0':
     resolution: {integrity: sha512-ovlBYwWor0OzG+yH4J3Ot+AneD818BttLA+Ii7wjbcLHUrnC4tbUPVGyNd3c/+71KETPKZfjhkTSpdS15dmXNQ==}
 
   '@prisma/driver-adapter-utils@7.3.0':
     resolution: {integrity: sha512-Wdlezh1ck0Rq2dDINkfSkwbR53q53//Eo1vVqVLwtiZ0I6fuWDGNPxwq+SNAIHnsU+FD/m3aIJKevH3vF13U3w==}
+
+  '@prisma/driver-adapter-utils@7.4.2':
+    resolution: {integrity: sha512-REdjFpT/ye9KdDs+CXAXPIbMQkVLhne9G5Pe97sNY4Ovx4r2DAbWM9hOFvvB1Oq8H8bOCdu0Ri3AoGALquQqVw==}
 
   '@prisma/engines-version@7.3.0-16.9d6ad21cbbceab97458517b147a6a09ff43aa735':
     resolution: {integrity: sha512-IH2va2ouUHihyiTTRW889LjKAl1CusZOvFfZxCDNpjSENt7g2ndFsK0vdIw/72v7+jCN6YgkHmdAP/BI7SDgyg==}
@@ -6063,6 +6078,9 @@ packages:
 
   '@types/follow-redirects@1.14.4':
     resolution: {integrity: sha512-GWXfsD0Jc1RWiFmMuMFCpXMzi9L7oPDVwxUnZdg89kDNnqsRfUKXEtUYtA98A6lig1WXH/CYY/fvPW9HuN5fTA==}
+
+  '@types/geojson@7946.0.16':
+    resolution: {integrity: sha512-6C8nqWur3j98U6+lXDfTUWIfgvZU+EumvpHKcYjujKH7woYyLj2sUmff0tRhrqM7BohUw7Pz3ZB1jj2gW9Fvmg==}
 
   '@types/glob@7.2.0':
     resolution: {integrity: sha512-ZUxbzKl0IfJILTS6t7ip5fQQM/J3TJYubDm3nMbgubNNYS62eXeUpoLUC8/7fJNiFYHTrGPQn7hspDUzIHX3UA==}
@@ -8653,6 +8671,10 @@ packages:
     resolution: {integrity: sha512-cf6L2Ds3h57VVmkZe+Pn+5APsT7FpqJtEhhieDCvrE2MK5Qk9MyffgQyuxQTm6BChfeZNtcOLHp9IcWRVcIcBQ==}
     engines: {node: '>=0.10.0'}
 
+  iconv-lite@0.7.2:
+    resolution: {integrity: sha512-im9DjEDQ55s9fL4EYzOAv0yMqmMBSZp6G0VvFyTMPKWxiSBHUj9NW/qqLmXUwXrrM7AvqSlTCfvqRb0cM8yYqw==}
+    engines: {node: '>=0.10.0'}
+
   idb@8.0.3:
     resolution: {integrity: sha512-LtwtVyVYO5BqRvcsKuB2iUMnHwPVByPCXFXOpuU96IZPPoPN6xjOGxZQ74pgSVVLQWtUOYgyeL4GE98BY5D3wg==}
 
@@ -9352,6 +9374,22 @@ packages:
   map-obj@4.3.0:
     resolution: {integrity: sha512-hdN1wVrZbb29eBGiGjJbeP8JbKjq1urkHJ/LIP/NY48MZ1QVXUsQBV1G1zvYFHn1XE06cwjBsOI2K3Ulnj1YXQ==}
     engines: {node: '>=8'}
+
+  mariadb@3.4.5:
+    resolution: {integrity: sha512-gThTYkhIS5rRqkVr+Y0cIdzr+GRqJ9sA2Q34e0yzmyhMCwyApf3OKAC1jnF23aSlIOqJuyaUFUcj7O1qZslmmQ==}
+    engines: {node: '>= 14'}
+
+  mariadb@3.5.1:
+    resolution: {integrity: sha512-ObKf/e7jU8pmwa5wTs1UwhLMrQYRBDwXPndej2Dv/rvbqsokJYlymubsNtpakVfjI+hd0bG3U6tiuVunDYoLtA==}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      '@types/geojson': '>=7946.0.0'
+      '@types/node': '>=18'
+    peerDependenciesMeta:
+      '@types/geojson':
+        optional: true
+      '@types/node':
+        optional: true
 
   markdown-extensions@2.0.0:
     resolution: {integrity: sha512-o5vL7aDWatOTX8LzaS1WMoaoxIiLRQJuIKKe2wAw6IeULDHaqbiqiggmx+pKvZDb1Sj+pE46Sn1T7lCqfFtg1Q==}
@@ -15184,7 +15222,7 @@ snapshots:
   '@inquirer/external-editor@1.0.3(@types/node@24.10.1)':
     dependencies:
       chardet: 2.1.1
-      iconv-lite: 0.7.0
+      iconv-lite: 0.7.2
     optionalDependencies:
       '@types/node': 24.10.1
 
@@ -16116,6 +16154,11 @@ snapshots:
 
   '@posthog/types@1.353.1': {}
 
+  '@prisma/adapter-mariadb@7.4.2':
+    dependencies:
+      '@prisma/driver-adapter-utils': 7.4.2
+      mariadb: 3.4.5
+
   '@prisma/adapter-pg@7.3.0':
     dependencies:
       '@prisma/driver-adapter-utils': 7.3.0
@@ -16146,6 +16189,8 @@ snapshots:
 
   '@prisma/debug@7.3.0': {}
 
+  '@prisma/debug@7.4.2': {}
+
   '@prisma/dev@0.20.0(typescript@5.9.3)':
     dependencies:
       '@electric-sql/pglite': 0.3.15
@@ -16171,6 +16216,10 @@ snapshots:
   '@prisma/driver-adapter-utils@7.3.0':
     dependencies:
       '@prisma/debug': 7.3.0
+
+  '@prisma/driver-adapter-utils@7.4.2':
+    dependencies:
+      '@prisma/debug': 7.4.2
 
   '@prisma/engines-version@7.3.0-16.9d6ad21cbbceab97458517b147a6a09ff43aa735': {}
 
@@ -18760,6 +18809,8 @@ snapshots:
     dependencies:
       '@types/node': 24.10.1
 
+  '@types/geojson@7946.0.16': {}
+
   '@types/glob@7.2.0':
     dependencies:
       '@types/minimatch': 6.0.0
@@ -19059,7 +19110,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
-      vitest: 4.0.18(@opentelemetry/api@1.9.0)(@types/node@24.10.1)(@vitest/ui@4.0.18)(jiti@2.6.1)(jsdom@28.0.0(@noble/hashes@2.0.1))(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.1)
+      vitest: 4.0.18(@opentelemetry/api@1.9.0)(@types/node@24.10.1)(@vitest/ui@4.0.18)(jiti@2.6.1)(jsdom@27.3.0)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.1)
 
   '@vitest/utils@4.0.18':
     dependencies:
@@ -19599,7 +19650,7 @@ snapshots:
       content-type: 1.0.5
       debug: 4.4.3(supports-color@8.1.1)
       http-errors: 2.0.0
-      iconv-lite: 0.7.0
+      iconv-lite: 0.7.2
       on-finished: 2.4.1
       qs: 6.14.1
       raw-body: 3.0.1
@@ -21791,6 +21842,10 @@ snapshots:
     dependencies:
       safer-buffer: 2.1.2
 
+  iconv-lite@0.7.2:
+    dependencies:
+      safer-buffer: 2.1.2
+
   idb@8.0.3: {}
 
   ieee754@1.2.1: {}
@@ -22513,6 +22568,23 @@ snapshots:
   map-obj@1.0.1: {}
 
   map-obj@4.3.0: {}
+
+  mariadb@3.4.5:
+    dependencies:
+      '@types/geojson': 7946.0.16
+      '@types/node': 24.10.1
+      denque: 2.1.0
+      iconv-lite: 0.6.3
+      lru-cache: 10.4.3
+
+  mariadb@3.5.1(@types/geojson@7946.0.16)(@types/node@24.10.1):
+    dependencies:
+      denque: 2.1.0
+      iconv-lite: 0.7.2
+      lru-cache: 10.4.3
+    optionalDependencies:
+      '@types/geojson': 7946.0.16
+      '@types/node': 24.10.1
 
   markdown-extensions@2.0.0: {}
 

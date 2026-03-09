@@ -1,21 +1,22 @@
-import { PrismaPg } from "@prisma/adapter-pg";
-import { env } from "@/env";
 import { PrismaClient } from "@/generated/prisma/client";
+import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { encryptedTokens } from "@/utils/prisma-extensions";
 
 declare global {
   var prisma: PrismaClient | undefined;
 }
 
-// Create the Prisma client with extensions, but cast it back to PrismaClient for type compatibility
+const databaseUrl = process.env.DATABASE_URL || "";
+
+// PrismaMariaDb factory takes a connection string (mysql:// or mariadb://)
+const adapter = new PrismaMariaDb(databaseUrl);
+
 const _prisma =
   global.prisma ||
-  (new PrismaClient({
-    adapter: new PrismaPg({
-      connectionString: env.PREVIEW_DATABASE_URL ?? env.DATABASE_URL,
-    }),
-  }).$extends(encryptedTokens) as unknown as PrismaClient);
+  (new PrismaClient({ adapter }).$extends(
+    encryptedTokens,
+  ) as unknown as PrismaClient);
 
-if (env.NODE_ENV === "development") global.prisma = _prisma;
+if (process.env.NODE_ENV === "development") global.prisma = _prisma;
 
 export default _prisma;

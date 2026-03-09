@@ -17,8 +17,8 @@ const KEY_LENGTH = 32; // 32 bytes for AES-256
 
 // Derive encryption key from environment variables
 const key = scryptSync(
-  env.EMAIL_ENCRYPT_SECRET,
-  env.EMAIL_ENCRYPT_SALT,
+  env.EMAIL_ENCRYPT_SECRET || "default-secret-change-me",
+  env.EMAIL_ENCRYPT_SALT || "default-salt-change-me",
   KEY_LENGTH,
 );
 

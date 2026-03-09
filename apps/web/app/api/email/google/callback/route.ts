@@ -6,9 +6,6 @@ import { withError } from "@/utils/middleware";
 import { isDuplicateError } from "@/utils/prisma-helpers";
 import { SafeError } from "@/utils/error";
 
-/**
- * Return HTML that notifies the opener window via postMessage and closes the popup.
- */
 function oauthResultHtml(success: boolean, email?: string, error?: string) {
   const messageObj = success
     ? { type: "email_oauth_success", provider: "google", email }
@@ -44,8 +41,6 @@ export const GET = withError("google/linking/callback", async (request) => {
     return oauthResultHtml(false, undefined, "Missing state parameter");
   }
 
-  // Decode userId directly from the state parameter (base64url JSON)
-  // Cookie-based validation doesn't work cross-origin (frontend on different port)
   let targetUserId: string;
   try {
     const decoded = JSON.parse(
@@ -63,18 +58,14 @@ export const GET = withError("google/linking/callback", async (request) => {
     const { tokens } = await googleAuth.getToken(code);
     const { id_token } = tokens;
 
-    if (!id_token) {
-      throw new SafeError("Missing id_token from Google response");
-    }
+    if (!id_token) throw new SafeError("Missing id_token from Google response");
 
     const ticket = await googleAuth.verifyIdToken({
       idToken: id_token,
       audience: env.GOOGLE_CLIENT_ID,
     });
     const payload = ticket.getPayload();
-    if (!payload) {
-      throw new SafeError("Could not get payload from ID token");
-    }
+    if (!payload) throw new SafeError("Could not get payload from ID token");
 
     const providerAccountId = payload.sub;
     const providerEmail = payload.email;
@@ -83,7 +74,6 @@ export const GET = withError("google/linking/callback", async (request) => {
       throw new SafeError("ID token missing subject or email");
     }
 
-    // Check if account already exists
     const existingAccount = await prisma.account.findUnique({
       where: {
         provider_providerAccountId: { provider: "google", providerAccountId },
@@ -92,7 +82,6 @@ export const GET = withError("google/linking/callback", async (request) => {
     });
 
     if (existingAccount) {
-      // Update tokens on existing account
       await prisma.account.update({
         where: { id: existingAccount.id },
         data: {
@@ -106,13 +95,11 @@ export const GET = withError("google/linking/callback", async (request) => {
           id_token: tokens.id_token,
         },
       });
-
       logger.info("Updated tokens for existing Google account", {
         email: providerEmail,
         accountId: existingAccount.id,
       });
     } else {
-      // Create new account + email account
       try {
         await prisma.account.create({
           data: {
@@ -138,7 +125,6 @@ export const GET = withError("google/linking/callback", async (request) => {
             },
           },
         });
-
         logger.info("Created new Google account", {
           email: providerEmail,
           targetUserId,
