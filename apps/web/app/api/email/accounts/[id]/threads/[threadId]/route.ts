@@ -32,12 +32,18 @@ export const GET = withAccountIdFromParam(
         from_name: name,
         from_email: email,
         to: sanitizeTo(msg.headers?.to || ""),
+        cc: sanitizeTo(msg.headers?.cc || ""),
+        bcc: sanitizeTo(msg.headers?.bcc || ""),
+        replyTo: msg.headers?.["reply-to"] || "",
         date: msg.internalDate
           ? new Date(Number(msg.internalDate)).toISOString()
           : msg.headers?.date || msg.date || "",
+        subject: msg.headers?.subject || "",
         body_html: msg.textHtml || "",
         body_text: msg.textPlain || "",
         snippet: msg.snippet || "",
+        headerMessageId: msg.headers?.["message-id"] || msg.id,
+        references: msg.headers?.references || "",
         attachments: (msg.attachments || []).map((att) => ({
           id: att.attachmentId,
           filename: att.filename,
