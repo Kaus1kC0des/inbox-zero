@@ -74,3 +74,182 @@ model EmailAccount {
   @@index([userId])
   @@map("iz_email_account")
 }
+
+// ─── Enums (no DB tables — needed by inbox-zero utility code) ───
+
+enum ActionType {
+  ARCHIVE
+  LABEL
+  REPLY
+  SEND_EMAIL
+  FORWARD
+  DRAFT_EMAIL
+  MARK_SPAM
+  CALL_WEBHOOK
+  MARK_READ
+  DIGEST
+  MOVE_FOLDER
+  NOTIFY_SENDER
+}
+
+enum Frequency {
+  NEVER
+  DAILY
+  WEEKLY
+}
+
+enum DraftReplyConfidence {
+  ALL_EMAILS
+  STANDARD
+  HIGH_CONFIDENCE
+}
+
+enum NewsletterStatus {
+  APPROVED
+  UNSUBSCRIBED
+  AUTO_ARCHIVED
+}
+
+enum ColdEmailStatus {
+  AI_LABELED_COLD
+  USER_REJECTED_COLD
+}
+
+enum DocumentFilingStatus {
+  PENDING
+  FILED
+  REJECTED
+  ERROR
+  PREVIEW
+}
+
+enum ColdEmailSetting {
+  DISABLED
+  LIST
+  LABEL
+  ARCHIVE_AND_LABEL
+  ARCHIVE_AND_READ_AND_LABEL
+}
+
+enum PremiumTier {
+  BASIC_MONTHLY
+  BASIC_ANNUALLY
+  PRO_MONTHLY
+  PRO_ANNUALLY
+  STARTER_MONTHLY       @map("BUSINESS_MONTHLY")
+  STARTER_ANNUALLY      @map("BUSINESS_ANNUALLY")
+  PLUS_MONTHLY
+  PLUS_ANNUALLY
+  PROFESSIONAL_MONTHLY  @map("BUSINESS_PLUS_MONTHLY")
+  PROFESSIONAL_ANNUALLY @map("BUSINESS_PLUS_ANNUALLY")
+  COPILOT_MONTHLY
+  LIFETIME
+}
+
+enum ExecutedRuleStatus {
+  APPLIED
+  APPLYING
+  REJECTED
+  PENDING
+  SKIPPED
+  ERROR
+}
+
+enum GroupItemType {
+  FROM
+  SUBJECT
+  BODY
+}
+
+enum CategoryFilterType {
+  INCLUDE
+  EXCLUDE
+}
+
+enum LogicalOperator {
+  AND
+  OR
+}
+
+enum ThreadTrackerType {
+  AWAITING
+  NEEDS_REPLY
+  NEEDS_ACTION
+}
+
+enum ProcessorType {
+  LEMON_SQUEEZY
+  STRIPE
+}
+
+enum CleanAction {
+  ARCHIVE
+  MARK_READ
+}
+
+enum SystemType {
+  TO_REPLY
+  FYI
+  AWAITING_REPLY
+  ACTIONED
+  COLD_EMAIL
+  NEWSLETTER
+  MARKETING
+  CALENDAR
+  RECEIPT
+  NOTIFICATION
+}
+
+enum ReferralStatus {
+  PENDING
+  COMPLETED
+}
+
+enum DigestStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+}
+
+enum ScheduledActionStatus {
+  PENDING
+  EXECUTING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum SchedulingStatus {
+  PENDING
+  SCHEDULED
+  FAILED
+}
+
+enum MeetingBriefingStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+enum GroupItemSource {
+  AI
+  USER
+  LABEL_REMOVED
+  LABEL_ADDED
+}
+
+enum MessagingProvider {
+  SLACK
+  TEAMS
+  TELEGRAM
+}
+
+enum AutomationJobRunStatus {
+  PENDING
+  RUNNING
+  SENT
+  SKIPPED
+  FAILED
+}
