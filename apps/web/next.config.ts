@@ -187,6 +187,11 @@ const nextConfig: NextConfig = {
         source: "/email/:path*",
         destination: "/api/email/:path*",
       },
+      // QikOffice: map /outlook/* to /api/outlook/* for frontend compatibility
+      {
+        source: "/outlook/:path*",
+        destination: "/api/outlook/:path*",
+      },
       {
         source: "/ingest/:path*",
         destination: "https://app.posthog.com/:path*",

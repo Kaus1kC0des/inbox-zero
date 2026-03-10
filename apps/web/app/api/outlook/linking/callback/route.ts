@@ -1,69 +1,54 @@
-import { NextResponse } from "next/server";
 import { env } from "@/env";
 import prisma from "@/utils/prisma";
 import { OUTLOOK_LINKING_STATE_COOKIE_NAME } from "@/utils/outlook/constants";
 import { withError } from "@/utils/middleware";
-import { captureException, SafeError } from "@/utils/error";
-import { validateOAuthCallback } from "@/utils/oauth/callback-validation";
-import { handleAccountLinking } from "@/utils/oauth/account-linking";
-import { mergeAccount } from "@/utils/user/merge-account";
-import { handleOAuthCallbackError } from "@/utils/oauth/error-handler";
-import {
-  acquireOAuthCodeLock,
-  getOAuthCodeResult,
-  setOAuthCodeResult,
-  clearOAuthCode,
-} from "@/utils/redis/oauth-code";
+import { SafeError } from "@/utils/error";
 import { isDuplicateError } from "@/utils/prisma-helpers";
+
+function oauthResultHtml(success: boolean, email?: string, error?: string) {
+  const messageObj = success
+    ? { type: "email_oauth_success", provider: "microsoft", email }
+    : { type: "email_oauth_error", error };
+
+  return new Response(
+    `<!DOCTYPE html><html><body><script>
+      if (window.opener) { window.opener.postMessage(${JSON.stringify(messageObj)}, '*'); }
+      window.close();
+    </script><p>${success ? "Success! This window will close." : `Error: ${error || "Unknown"}`}</p></body></html>`,
+    {
+      status: 200,
+      headers: {
+        "Content-Type": "text/html",
+        "Cross-Origin-Opener-Policy": "unsafe-none",
+      },
+    },
+  );
+}
 
 export const GET = withError("outlook/linking/callback", async (request) => {
   const logger = request.logger;
 
   if (!env.MICROSOFT_CLIENT_ID || !env.MICROSOFT_CLIENT_SECRET)
-    throw new SafeError("Microsoft login not enabled");
+    return oauthResultHtml(false, undefined, "Microsoft login not enabled");
 
   const searchParams = request.nextUrl.searchParams;
-  const storedState = request.cookies.get(
-    OUTLOOK_LINKING_STATE_COOKIE_NAME,
-  )?.value;
+  const code = searchParams.get("code");
+  const receivedState = searchParams.get("state");
 
-  const validation = validateOAuthCallback({
-    code: searchParams.get("code"),
-    receivedState: searchParams.get("state"),
-    storedState,
-    stateCookieName: OUTLOOK_LINKING_STATE_COOKIE_NAME,
-    logger,
-  });
+  if (!code)
+    return oauthResultHtml(false, undefined, "Missing authorization code");
+  if (!receivedState)
+    return oauthResultHtml(false, undefined, "Missing state parameter");
 
-  if (!validation.success) {
-    return validation.response;
-  }
-
-  const { targetUserId, code } = validation;
-
-  const cachedResult = await getOAuthCodeResult(code);
-  if (cachedResult) {
-    logger.info("OAuth code already processed, returning cached result", {
-      targetUserId,
-    });
-    const redirectUrl = new URL("/accounts", env.NEXT_PUBLIC_BASE_URL);
-    for (const [key, value] of Object.entries(cachedResult.params)) {
-      redirectUrl.searchParams.set(key, value);
-    }
-    const response = NextResponse.redirect(redirectUrl);
-    response.cookies.delete(OUTLOOK_LINKING_STATE_COOKIE_NAME);
-    return response;
-  }
-
-  const acquiredLock = await acquireOAuthCodeLock(code);
-  if (!acquiredLock) {
-    logger.info("OAuth code is being processed by another request", {
-      targetUserId,
-    });
-    const redirectUrl = new URL("/accounts", env.NEXT_PUBLIC_BASE_URL);
-    const response = NextResponse.redirect(redirectUrl);
-    response.cookies.delete(OUTLOOK_LINKING_STATE_COOKIE_NAME);
-    return response;
+  let targetUserId: string;
+  try {
+    const decoded = JSON.parse(
+      Buffer.from(receivedState, "base64url").toString("utf8"),
+    );
+    targetUserId = decoded.userId;
+    if (!targetUserId) throw new Error("No userId in state");
+  } catch {
+    return oauthResultHtml(false, undefined, "Invalid state parameter");
   }
 
   try {
@@ -72,9 +57,7 @@ export const GET = withError("outlook/linking/callback", async (request) => {
       `https://login.microsoftonline.com/${env.MICROSOFT_TENANT_ID}/oauth2/v2.0/token`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
           client_id: env.MICROSOFT_CLIENT_ID,
           client_secret: env.MICROSOFT_CLIENT_SECRET,
@@ -88,37 +71,46 @@ export const GET = withError("outlook/linking/callback", async (request) => {
     const tokens = await tokenResponse.json();
 
     if (!tokenResponse.ok) {
-      logger.error("Failed to exchange code for tokens", {
-        error: tokens.error_description,
-      });
-      captureException(
-        new Error(
-          tokens.error_description || "Failed to exchange code for tokens",
-        ),
-      );
       throw new SafeError(
         tokens.error_description || "Failed to exchange code for tokens",
       );
     }
 
-    // Get user profile using the access token
+    // Get user profile
     const profileResponse = await fetch("https://graph.microsoft.com/v1.0/me", {
-      headers: {
-        Authorization: `Bearer ${tokens.access_token}`,
-      },
+      headers: { Authorization: `Bearer ${tokens.access_token}` },
     });
 
-    if (!profileResponse.ok) {
+    if (!profileResponse.ok)
       throw new SafeError("Failed to fetch user profile");
-    }
 
     const profile = await profileResponse.json();
     const providerAccountId = profile.id;
     const providerEmail = profile.mail || profile.userPrincipalName;
 
-    if (!providerAccountId || !providerEmail) {
+    if (!providerAccountId || !providerEmail)
       throw new SafeError("Profile missing required id or email");
+
+    // Optionally fetch profile photo
+    let profileImage: string | null = null;
+    try {
+      const photoResponse = await fetch(
+        "https://graph.microsoft.com/v1.0/me/photo/$value",
+        { headers: { Authorization: `Bearer ${tokens.access_token}` } },
+      );
+      if (photoResponse.ok) {
+        const photoBuffer = await photoResponse.arrayBuffer();
+        profileImage = `data:image/jpeg;base64,${Buffer.from(photoBuffer).toString("base64")}`;
+      }
+    } catch (e) {
+      logger.warn("Failed to fetch profile picture", { error: e });
     }
+
+    const expiresAt = tokens.expires_in
+      ? new Date(
+          Date.now() + Number.parseInt(String(tokens.expires_in), 10) * 1000,
+        )
+      : null;
 
     const existingAccount = await prisma.account.findUnique({
       where: {
@@ -127,73 +119,31 @@ export const GET = withError("outlook/linking/callback", async (request) => {
           providerAccountId,
         },
       },
-      select: {
-        id: true,
-        userId: true,
-        user: { select: { name: true, email: true } },
-        emailAccount: true,
-      },
+      select: { id: true, userId: true },
     });
 
-    const linkingResult = await handleAccountLinking({
-      existingAccountId: existingAccount?.id || null,
-      hasEmailAccount: !!existingAccount?.emailAccount,
-      existingUserId: existingAccount?.userId || null,
-      targetUserId,
-      provider: "microsoft",
-      providerEmail,
-      logger,
-    });
-
-    if (linkingResult.type === "redirect") {
-      linkingResult.response.cookies.delete(OUTLOOK_LINKING_STATE_COOKIE_NAME);
-      return linkingResult.response;
-    }
-
-    if (linkingResult.type === "continue_create") {
-      logger.info(
-        "Creating new Microsoft account and linking to current user",
-        {
-          email: providerEmail,
-          targetUserId,
+    if (existingAccount) {
+      await prisma.account.update({
+        where: { id: existingAccount.id },
+        data: {
+          access_token: tokens.access_token,
+          ...(tokens.refresh_token != null && {
+            refresh_token: tokens.refresh_token,
+          }),
+          expires_at: expiresAt,
+          scope: tokens.scope,
+          token_type: tokens.token_type,
+          disconnectedAt: null,
         },
-      );
-
-      let expiresAt: Date | null = null;
-      if (tokens.expires_at) {
-        expiresAt = new Date(tokens.expires_at * 1000);
-      } else if (tokens.expires_in) {
-        const expiresInSeconds =
-          typeof tokens.expires_in === "string"
-            ? Number.parseInt(tokens.expires_in, 10)
-            : tokens.expires_in;
-        expiresAt = new Date(Date.now() + expiresInSeconds * 1000);
-      }
-
-      let profileImage = null;
+      });
+      logger.info("Updated tokens for existing Microsoft account", {
+        email: providerEmail,
+      });
+    } else {
       try {
-        const photoResponse = await fetch(
-          "https://graph.microsoft.com/v1.0/me/photo/$value",
-          {
-            headers: {
-              Authorization: `Bearer ${tokens.access_token}`,
-            },
-          },
-        );
-
-        if (photoResponse.ok) {
-          const photoBuffer = await photoResponse.arrayBuffer();
-          const photoBase64 = Buffer.from(photoBuffer).toString("base64");
-          profileImage = `data:image/jpeg;base64,${photoBase64}`;
-        }
-      } catch (error) {
-        logger.warn("Failed to fetch profile picture", { error });
-      }
-
-      try {
-        const newAccount = await prisma.account.create({
+        await prisma.account.create({
           data: {
-            userId: targetUserId,
+            userId: BigInt(targetUserId),
             type: "oidc",
             provider: "microsoft",
             providerAccountId,
@@ -205,7 +155,7 @@ export const GET = withError("outlook/linking/callback", async (request) => {
             emailAccount: {
               create: {
                 email: providerEmail,
-                userId: targetUserId,
+                userId: BigInt(targetUserId),
                 name:
                   profile.displayName ||
                   profile.givenName ||
@@ -216,176 +166,45 @@ export const GET = withError("outlook/linking/callback", async (request) => {
             },
           },
         });
-
-        logger.info("Successfully created and linked new Microsoft account", {
+        logger.info("Created new Microsoft account", {
           email: providerEmail,
           targetUserId,
-          accountId: newAccount.id,
         });
       } catch (createError: unknown) {
         if (isDuplicateError(createError)) {
-          const accountNow = await prisma.account.findUnique({
+          logger.info("Account already exists (race), updating tokens", {
+            providerAccountId,
+          });
+          await prisma.account.update({
             where: {
               provider_providerAccountId: {
                 provider: "microsoft",
                 providerAccountId,
               },
             },
-            select: { id: true, userId: true },
+            data: {
+              access_token: tokens.access_token,
+              ...(tokens.refresh_token != null && {
+                refresh_token: tokens.refresh_token,
+              }),
+              expires_at: expiresAt,
+            },
           });
-
-          if (accountNow?.userId === targetUserId) {
-            logger.info(
-              "Account already exists for same user, updating tokens",
-              {
-                targetUserId,
-                providerAccountId,
-                accountId: accountNow.id,
-              },
-            );
-
-            await updateMicrosoftAccountTokens(accountNow.id, tokens);
-          } else {
-            throw createError;
-          }
         } else {
           throw createError;
         }
       }
-
-      await setOAuthCodeResult(code, { success: "account_created_and_linked" });
-
-      const successUrl = new URL("/accounts", env.NEXT_PUBLIC_BASE_URL);
-      successUrl.searchParams.set("success", "account_created_and_linked");
-      const successResponse = NextResponse.redirect(successUrl);
-      successResponse.cookies.delete(OUTLOOK_LINKING_STATE_COOKIE_NAME);
-
-      return successResponse;
     }
 
-    if (linkingResult.type === "update_tokens") {
-      logger.info("Updating tokens for existing Microsoft account", {
-        email: providerEmail,
-        targetUserId,
-        accountId: linkingResult.existingAccountId,
-      });
-
-      await updateMicrosoftAccountTokens(
-        linkingResult.existingAccountId,
-        tokens,
-      );
-
-      logger.info("Successfully updated tokens for Microsoft account", {
-        email: providerEmail,
-        targetUserId,
-        accountId: linkingResult.existingAccountId,
-      });
-
-      await setOAuthCodeResult(code, { success: "tokens_updated" });
-
-      const successUrl = new URL("/accounts", env.NEXT_PUBLIC_BASE_URL);
-      successUrl.searchParams.set("success", "tokens_updated");
-      const successResponse = NextResponse.redirect(successUrl);
-      successResponse.cookies.delete(OUTLOOK_LINKING_STATE_COOKIE_NAME);
-
-      return successResponse;
-    }
-
-    logger.info("Merging Microsoft account (user confirmed).", {
-      email: providerEmail,
-      targetUserId,
-    });
-
-    const mergeType = await mergeAccount({
-      sourceAccountId: linkingResult.sourceAccountId,
-      sourceUserId: linkingResult.sourceUserId,
-      targetUserId,
-      email: providerEmail,
-      name: existingAccount?.user.name || null,
-      logger,
-    });
-
-    const successMessage =
-      mergeType === "full_merge"
-        ? "account_merged"
-        : "account_created_and_linked";
-
-    logger.info("Account re-assigned to user.", {
-      email: providerEmail,
-      targetUserId,
-      sourceUserId: linkingResult.sourceUserId,
-      mergeType,
-    });
-
-    await setOAuthCodeResult(code, { success: successMessage });
-
-    const successUrl = new URL("/accounts", env.NEXT_PUBLIC_BASE_URL);
-    successUrl.searchParams.set("success", successMessage);
-    const successResponse = NextResponse.redirect(successUrl);
-    successResponse.cookies.delete(OUTLOOK_LINKING_STATE_COOKIE_NAME);
-
-    return successResponse;
+    const response = oauthResultHtml(true, providerEmail);
+    response.headers.set(
+      "Set-Cookie",
+      `${OUTLOOK_LINKING_STATE_COOKIE_NAME}=; Path=/; Max-Age=0`,
+    );
+    return response;
   } catch (error) {
-    await clearOAuthCode(code);
-
-    const errorUrl = new URL("/accounts", env.NEXT_PUBLIC_BASE_URL);
-    return handleOAuthCallbackError({
-      error,
-      redirectUrl: errorUrl,
-      stateCookieName: OUTLOOK_LINKING_STATE_COOKIE_NAME,
-      logger,
-    });
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error("Outlook OAuth callback error", { error });
+    return oauthResultHtml(false, undefined, message);
   }
 });
-
-interface MicrosoftTokens {
-  access_token: string;
-  refresh_token?: string | null;
-  expires_at?: number;
-  expires_in?: string | number;
-  scope?: string | null;
-  token_type?: string | null;
-}
-
-function parseMicrosoftExpiresAt(tokens: MicrosoftTokens): Date | null {
-  if (tokens.expires_at) {
-    return new Date(tokens.expires_at * 1000);
-  }
-  if (tokens.expires_in) {
-    const expiresInSeconds =
-      typeof tokens.expires_in === "string"
-        ? Number.parseInt(tokens.expires_in, 10)
-        : tokens.expires_in;
-    return new Date(Date.now() + expiresInSeconds * 1000);
-  }
-  return null;
-}
-
-async function updateMicrosoftAccountTokens(
-  accountId: string,
-  tokens: MicrosoftTokens,
-) {
-  await prisma.account.update({
-    where: { id: accountId },
-    data: {
-      access_token: tokens.access_token,
-      // Only update refresh_token if provider returned one (preserves existing token)
-      ...(tokens.refresh_token != null && {
-        refresh_token: tokens.refresh_token,
-      }),
-      expires_at: parseMicrosoftExpiresAt(tokens),
-      scope: tokens.scope,
-      token_type: tokens.token_type,
-      disconnectedAt: null,
-    },
-  });
-
-  // Force subscription renewal on next watch cycle after reconnect.
-  // This avoids reusing stale subscription state that can survive token issues.
-  await prisma.emailAccount.updateMany({
-    where: { accountId },
-    data: {
-      watchEmailsExpirationDate: new Date(0),
-    },
-  });
-}
