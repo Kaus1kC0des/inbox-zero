@@ -36,7 +36,9 @@ export const GET = withAccountIdFromParam(
         bcc: sanitizeTo(msg.headers?.bcc || ""),
         replyTo: msg.headers?.["reply-to"] || "",
         date: msg.internalDate
-          ? new Date(Number(msg.internalDate)).toISOString()
+          ? (isNaN(Number(msg.internalDate))
+            ? msg.internalDate
+            : new Date(Number(msg.internalDate)).toISOString())
           : msg.headers?.date || msg.date || "",
         subject: msg.headers?.subject || "",
         body_html: msg.textHtml || "",

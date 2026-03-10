@@ -23,7 +23,9 @@ function mapThread(thread: { id: string; messages: ParsedMessage[]; snippet: str
     subject: firstMsg?.headers?.subject || firstMsg?.subject || "",
     snippet: thread.snippet || lastMsg?.snippet || "",
     date: lastMsg?.internalDate
-      ? new Date(Number(lastMsg.internalDate)).toISOString()
+      ? (isNaN(Number(lastMsg.internalDate))
+        ? lastMsg.internalDate
+        : new Date(Number(lastMsg.internalDate)).toISOString())
       : lastMsg?.headers?.date || lastMsg?.date || "",
     is_read: !lastMsg?.labelIds?.includes("UNREAD"),
     message_count: thread.messages.length,
