@@ -1413,6 +1413,7 @@ export class OutlookProvider implements EmailProvider {
       before,
       isUnread,
       type,
+      q,
       labelId,
       // biome-ignore lint/correctness/noUnusedVariables: to do
       labelIds,
@@ -1494,8 +1495,13 @@ export class OutlookProvider implements EmailProvider {
         request = request.filter(filter);
       }
 
-      // Only add ordering if we don't have a fromEmail filter to avoid complexity
-      if (!fromEmail) {
+      // Free-text search via Microsoft Graph $search (searches subject, body, sender)
+      if (q) {
+        request = request.search(`"${q.replace(/"/g, '\\"')}"`);
+      }
+
+      // Only add ordering if we don't have a fromEmail filter or $search (both conflict with orderby)
+      if (!fromEmail && !q) {
         request = request.orderby("receivedDateTime DESC");
       }
 

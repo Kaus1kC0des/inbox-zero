@@ -5,6 +5,7 @@ export const threadsQuery = z.object({
   limit: z.coerce.number().max(100).nullish(),
   type: z.string().nullish(),
   nextPageToken: z.string().nullish(),
+  q: z.string().nullish(), // Free-text search query
   labelId: z.string().nullish(), // For Google
   labelIds: z.array(z.string()).nullish(), // For Google
   excludeLabelNames: z.array(z.string()).nullish(), // For Google

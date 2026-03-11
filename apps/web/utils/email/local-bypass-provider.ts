@@ -278,6 +278,25 @@ export function createLocalBypassEmailProvider(logger?: Logger): EmailProvider {
           return false;
         }
 
+        // Free-text search across subject and snippet
+        if (query?.q) {
+          const needle = query.q.toLowerCase();
+          const subject = (
+            message.headers?.subject ||
+            message.subject ||
+            ""
+          ).toLowerCase();
+          const snippet = (message.snippet || "").toLowerCase();
+          const from = (message.headers?.from || "").toLowerCase();
+          if (
+            !subject.includes(needle) &&
+            !snippet.includes(needle) &&
+            !from.includes(needle)
+          ) {
+            return false;
+          }
+        }
+
         return true;
       });
 

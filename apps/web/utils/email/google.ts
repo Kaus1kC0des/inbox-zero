@@ -1293,6 +1293,7 @@ export class GmailProvider implements EmailProvider {
         before,
         isUnread,
         type,
+        q,
         excludeLabelNames,
         labelIds,
         labelId,
@@ -1300,6 +1301,11 @@ export class GmailProvider implements EmailProvider {
 
       function getQuery() {
         const queryParts: string[] = [];
+
+        // Free-text search query (Gmail search syntax supported)
+        if (q) {
+          queryParts.push(q);
+        }
 
         if (fromEmail) {
           queryParts.push(`from:${fromEmail}`);
