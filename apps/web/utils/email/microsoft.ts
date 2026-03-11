@@ -1445,42 +1445,50 @@ export class OutlookProvider implements EmailProvider {
       let endpoint = "/me/messages";
       const filters: string[] = [];
 
+      // When $search is used, $filter is NOT supported by Microsoft Graph.
+      // Use folder-specific endpoints instead of $filter for folder routing.
+      const useSearch = !!q;
+
       // Route to appropriate endpoint based on type
       if (type === "sent") {
         endpoint = "/me/mailFolders('sentitems')/messages";
       } else if (type === "all") {
-        // For "all" type, use default messages endpoint with folder filter
-        filters.push(
-          "(parentFolderId eq 'inbox' or parentFolderId eq 'archive')",
-        );
+        if (useSearch) {
+          // $search across all messages — no $filter allowed
+          endpoint = "/me/messages";
+        } else {
+          filters.push(
+            "(parentFolderId eq 'inbox' or parentFolderId eq 'archive')",
+          );
+        }
       } else if (labelId) {
-        // Use labelId as parentFolderId (should be lowercase for Outlook)
-        filters.push(`parentFolderId eq '${labelId.toLowerCase()}'`);
+        // Use folder-specific endpoint (works with both $search and $filter)
+        endpoint = `/me/mailFolders('${labelId.toLowerCase()}')/messages`;
       } else {
-        // Default to inbox only
-        filters.push("parentFolderId eq 'inbox'");
+        // Default to inbox — use folder endpoint so $search works
+        endpoint = "/me/mailFolders('inbox')/messages";
       }
 
-      // Add other filters
-      if (fromEmail) {
-        // Escape single quotes in email address
-        const escapedEmail = escapeODataString(fromEmail);
-        filters.push(`from/emailAddress/address eq '${escapedEmail}'`);
-      }
+      // Add other filters only when NOT using $search
+      if (!useSearch) {
+        if (fromEmail) {
+          const escapedEmail = escapeODataString(fromEmail);
+          filters.push(`from/emailAddress/address eq '${escapedEmail}'`);
+        }
 
-      // Handle structured date options
-      if (after) {
-        const afterISO = after.toISOString();
-        filters.push(`receivedDateTime gt ${afterISO}`);
-      }
+        if (after) {
+          const afterISO = after.toISOString();
+          filters.push(`receivedDateTime gt ${afterISO}`);
+        }
 
-      if (before) {
-        const beforeISO = before.toISOString();
-        filters.push(`receivedDateTime lt ${beforeISO}`);
-      }
+        if (before) {
+          const beforeISO = before.toISOString();
+          filters.push(`receivedDateTime lt ${beforeISO}`);
+        }
 
-      if (isUnread) {
-        filters.push("isRead eq false");
+        if (isUnread) {
+          filters.push("isRead eq false");
+        }
       }
 
       const filter = filters.length > 0 ? filters.join(" and ") : undefined;
