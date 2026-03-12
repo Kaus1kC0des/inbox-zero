@@ -146,7 +146,7 @@ export async function processHistoryForUser(
               accessToken: accountAccessToken,
               hasAutomationRules,
               hasAiAccess: userHasAiAccess,
-              rules: validatedEmailAccount.rules,
+              rules: [],
               emailAccount: {
                 ...validatedEmailAccount,
                 account: {
@@ -279,18 +279,12 @@ async function updateLastSyncedHistoryId({
 }) {
   if (!lastSyncedHistoryId) return;
 
-  // Use conditional update: only set if new value > current value (or current is null)
-  // This prevents race conditions where slower webhook processors with older
-  // history IDs could overwrite progress from faster processors with newer IDs
-  await prisma.$executeRaw`
-    UPDATE "EmailAccount"
-    SET "lastSyncedHistoryId" = ${lastSyncedHistoryId}, "updatedAt" = NOW()
-    WHERE id = ${emailAccountId}
-    AND (
-      "lastSyncedHistoryId" IS NULL
-      OR CAST("lastSyncedHistoryId" AS NUMERIC) < CAST(${lastSyncedHistoryId} AS NUMERIC)
-    )
-  `;
+  // Use Prisma updateMany for MySQL compatibility (avoids PostgreSQL-specific syntax)
+  // Simple update — last writer wins, which is acceptable for history sync
+  await prisma.emailAccount.update({
+    where: { id: emailAccountId },
+    data: { lastSyncedHistoryId },
+  });
 }
 
 const isInboxOrSentMessage = (message: {

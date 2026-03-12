@@ -36,6 +36,7 @@ import {
 } from "@/utils/premium/server";
 import { clearSpecificErrorMessages, ErrorType } from "@/utils/error-messages";
 import prisma from "@/utils/prisma";
+import { ensureEmailAccountsWatched } from "@/utils/email/watch-manager";
 
 const logger = createScopedLogger("auth");
 
@@ -500,6 +501,16 @@ async function handleLinkAccount(account: Account) {
         logger,
       });
 
+      // Re-register watch in case it lapsed while disconnected
+      ensureEmailAccountsWatched({ userIds: [account.userId], logger }).catch(
+        (error) => {
+          logger.error("[linkAccount] Error re-setting up email watch:", {
+            userId: account.userId,
+            error,
+          });
+        },
+      );
+
       return;
     }
 
@@ -557,6 +568,16 @@ async function handleLinkAccount(account: Account) {
       userId: account.userId,
       accountId: account.id,
     });
+
+    // Auto-register Gmail/Outlook watch so new emails trigger real-time push notifications
+    ensureEmailAccountsWatched({ userIds: [account.userId], logger }).catch(
+      (error) => {
+        logger.error("[linkAccount] Error setting up email watch:", {
+          userId: account.userId,
+          error,
+        });
+      },
+    );
   } catch (error) {
     logger.error("[linkAccount] Error during linking process:", {
       userId: account.userId,

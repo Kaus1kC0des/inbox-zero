@@ -223,7 +223,11 @@ function withMiddleware<T extends NextRequest>(
 async function authMiddleware(
   req: NextRequest,
 ): Promise<RequestWithAuth | Response> {
-  const token = req.headers.get("authorization");
+  const authHeader = req.headers.get("authorization");
+  // Strip "Bearer " prefix if present
+  const token = authHeader?.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : authHeader;
   const user = await validateQikOfficeToken(token);
 
   if (!user) {

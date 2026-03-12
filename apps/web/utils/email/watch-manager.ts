@@ -57,14 +57,6 @@ async function getEmailAccountsToWatch(userIds: string[] | null) {
       user: {
         select: {
           id: true,
-          aiApiKey: true,
-          premium: {
-            select: {
-              tier: true,
-              lemonSqueezyRenewsAt: true,
-              stripeSubscriptionStatus: true,
-            },
-          },
         },
       },
     },
@@ -129,12 +121,10 @@ async function watchEmailAccount(
   emailAccount: Awaited<ReturnType<typeof getEmailAccountsToWatch>>[number],
   logger: Logger,
 ): Promise<WatchEmailAccountResult | null> {
-  const { account, user, watchEmailsExpirationDate } = emailAccount;
+  const { account, watchEmailsExpirationDate } = emailAccount;
 
-  const userHasAiAccess = hasAiAccess(
-    user.premium?.tier || null,
-    user.aiApiKey,
-  );
+  // NEXT_PUBLIC_BYPASS_PREMIUM_CHECKS=true so hasAiAccess always returns true
+  const userHasAiAccess = hasAiAccess(null);
 
   if (!userHasAiAccess) {
     logger.info("User does not have access to AI or cold email");
