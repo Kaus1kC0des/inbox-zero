@@ -26,11 +26,6 @@ export async function processHistoryItem(
 
   if (!messageId || !threadId) return;
 
-  logger.info("Gmail history item received", {
-    eventType: type,
-    labelIds: item.message?.labelIds,
-  });
-
   const provider = await createEmailProvider({
     emailAccountId,
     provider: "google",
@@ -39,7 +34,6 @@ export async function processHistoryItem(
 
   // Handle Google-specific label events
   if (type === HistoryEventType.LABEL_REMOVED) {
-    logger.info("Processing label removed event for learning");
     return handleLabelRemovedEvent(
       item,
       {
@@ -49,7 +43,6 @@ export async function processHistoryItem(
       logger,
     );
   } else if (type === HistoryEventType.LABEL_ADDED) {
-    logger.info("Processing label added event for learning");
     return;
   }
 
@@ -59,11 +52,8 @@ export async function processHistoryItem(
     messageId,
   });
   if (!isFree) {
-    logger.info("Skipping. Message already being processed.");
     return;
   }
-
-  logger.info("Gmail lock acquired, calling shared processor");
 
   return processHistoryItemShared(
     { messageId, threadId },

@@ -70,15 +70,10 @@ export async function processHistoryItem(
   const userEmail = emailAccount.email;
 
   try {
-    logger.info("Shared processor started");
-
     // Fetch message if not pre-provided
     const parsedMessage = message ?? (await provider.getMessage(messageId));
 
-    if (isIgnoredSender(parsedMessage.headers.from)) {
-      logger.info("Skipping. Ignored sender.");
-      return;
-    }
+    if (isIgnoredSender(parsedMessage.headers.from)) return;
 
     const actualThreadId = threadId || parsedMessage.threadId;
 
@@ -90,12 +85,7 @@ export async function processHistoryItem(
       (parsedMessage.labelIds?.includes("SENT") &&
         !parsedMessage.labelIds?.includes("INBOX"));
 
-    if (isOutbound) {
-      logger.info("Skipping outbound message");
-      return;
-    }
-
-    logger.info("Inbound message — notifying socket service");
+    if (isOutbound) return;
 
     // Notify the QikOffice socket service so the frontend shows real-time update
     notifySocketService({

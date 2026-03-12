@@ -99,7 +99,6 @@ export async function validateWebhookAccount(
   }
 
   if (emailAccount.account?.disconnectedAt) {
-    logger.info("Skipping disconnected account");
     return { success: false, response: NextResponse.json({ ok: true }) };
   }
 
@@ -110,8 +109,6 @@ export async function validateWebhookAccount(
     logger.error("Missing access or refresh token");
     return { success: false, response: NextResponse.json({ ok: true }) };
   }
-
-  logger.info("Webhook account validated", { email: emailAccount.email });
 
   return {
     success: true,

@@ -34,8 +34,6 @@ export const POST = withError("google/webhook", async (request) => {
     historyId: decodedData.historyId,
   });
 
-  logger.info("Received webhook - acknowledging immediately");
-
   // Process history asynchronously using after() to avoid Pub/Sub acknowledgment timeout
   // This ensures we acknowledge the message quickly while still processing it fully
   after(() =>

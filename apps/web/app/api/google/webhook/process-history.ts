@@ -135,10 +135,6 @@ export async function processHistoryForUser(
         const historyEntries = history.history ?? [];
 
         if (historyEntries.length > 0) {
-          logger.info("Processing history", {
-            startHistoryId: historyResult.startHistoryId,
-          });
-
           await processHistory(
             {
               history: historyEntries,
@@ -157,14 +153,6 @@ export async function processHistoryForUser(
             logger,
           );
         } else {
-          // When we truncate a large gap (webhookHistoryId - 500), Gmail can return
-          // an empty recent window. We still need to advance to the webhook historyId
-          // so we don't stay permanently behind and keep skipping.
-          logger.info("No history", {
-            startHistoryId: historyResult.startHistoryId,
-          });
-
-          // important to save this or we can get into a loop with never receiving history
           await updateLastSyncedHistoryId({
             emailAccountId: validatedEmailAccount.id,
             lastSyncedHistoryId: historyId.toString(),
@@ -215,12 +203,6 @@ async function processHistory(options: ProcessHistoryOptions, logger: Logger) {
       ...(h.messagesAdded || [])
         .filter((m) => {
           const isRelevant = isInboxOrSentMessage(m);
-          if (!isRelevant) {
-            logger.info("Skipping message not in inbox or sent", {
-              messageId: m.message?.id,
-              labelIds: m.message?.labelIds,
-            });
-          }
           return isRelevant;
         })
         .map((m) => ({ type: HistoryEventType.MESSAGE_ADDED, item: m })),
@@ -361,12 +343,6 @@ async function fetchGmailHistoryResilient({
       skippedHistoryItems: startHistoryIdNum - lastSyncedHistoryId,
     });
   }
-
-  logger.info("Listing history", {
-    startHistoryId,
-    lastSyncedHistoryId: emailAccount?.lastSyncedHistoryId,
-    gmailHistoryId: startHistoryId,
-  });
 
   try {
     const data = await getHistory(

@@ -64,11 +64,6 @@ export async function handleLabelRemovedEvent(
     return;
   }
 
-  logger.info("Processing label removal for learning", {
-    labelCount: removedLabelIds.length,
-    removedLabels: removedLabelIds,
-  });
-
   let sender: string | null = null;
 
   try {
